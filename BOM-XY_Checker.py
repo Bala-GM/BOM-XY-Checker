@@ -61,9 +61,43 @@ import xlrd
 import xml.etree.ElementTree as ET
 from openpyxl.utils.exceptions import InvalidFileException
 import psutil
+import hashlib
+import wmi
+
+def get_unique_id():
+    """Get the unique BIOS serial number."""
+    c = wmi.WMI()
+    for bios in c.Win32_BIOS():
+        return bios.SerialNumber
+
+def generate_signature(unique_id):
+    """Generate a SHA-256 hash based on the unique ID."""
+    return hashlib.sha256(unique_id.encode()).hexdigest()
+
+def is_authorized_pc(stored_signatures):
+    """Check if the current PC's signature matches any authorized signature."""
+    current_signature = generate_signature(get_unique_id())
+    return current_signature in stored_signatures
+
+# List of authorized PC signatures
+AUTHORIZED_SIGNATURES = [
+    "a169c71b542eb023007b83cd8eeb097d78b1ce7c80d81781ffd00b420c84b077",
+    "6f771f8d9a8fafa6255c1a22428eace4d106d5706a573976d2126a45a673adbe",
+    "487578a3684a308fca6319f990c3f18db162efcfe97ba8e441864f01deb68d42",
+    "054c2b658cfda4af4b40a91ed11734852d2baf519ede0e8721652c7a8c0ce711",
+    "e07a9f0d1c4b0ac522bc40845aa2305d57c3ed9af8b3f5e8d2daebe09afac7a2",
+    "c31012f558de10522bb63c9febe024f3cb16de67624b8cf917b4e7f7c8dc9ad3"
+]
+
+if not is_authorized_pc(AUTHORIZED_SIGNATURES):
+    print("Unauthorized system. This program cannot run on this PC.")
+    messagebox.showinfo("Unauthorized system", "This program cannot run on this PC.")
+    sys.exit()
+
+print("Authorized system. Program running...")
 
 print('\n')
-print("\033[92;4m*******BOM Manipulation--PY_V-1.4.2 interface_TTK/Jul|27|07|2025-89P13*******\033[0m")
+print("\033[92;4m*******BOM Manipulation--PY_V-1.5.0 interface_TTK/AUG|04|08|2025-89P13*******\033[0m")
 print('\n')
 
 # Get the current date and time
@@ -1304,7 +1338,118 @@ except ValueError:
     common_columns = [col for col in desired_order if col in dfah11.columns]
 
     # Reorder the DataFrame based on the desired_order
-    dfah11 = dfah11[common_columns]
+    dfah11 = dfah11[common_columns]    
+    
+    import pandas as pd
+    
+    # Make a copy
+    dfah12 = dfah10.copy()
+
+    # Print column headers
+    print("Columns in dfah12: LCR CSV")
+    print(dfah12.columns.tolist())
+
+    # Keep only the required columns
+    required_columns = [
+        "PartNumber", "Group", "Priority", "Description",
+        "LCRTYPE", "LCR Type", "LCR Value", "LCR Unit", "LCR Tolerance", "Tolerance"
+    ]
+    dfah12 = dfah12[required_columns]
+
+    # Rename "PartNumber" to "PartNumberName"
+    dfah12 = dfah12.rename(columns={"PartNumber": "PartNumberName"})
+
+    # Add new column "VenderLotName" with a user-selected value (e.g., "Flexa")
+    user_value = "Flexa"  # or "Vender1"
+    dfah12["VenderLotName"] = user_value
+
+    # Create the new copied columns
+    dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check"] = dfah12["LCRTYPE"]
+    dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check Parameter"] = dfah12["LCR Type"]
+    dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check Nominal Value"] = dfah12["LCR Value"]
+    dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check Nominal Value Unit"] = dfah12["LCR Unit"]
+    dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check Tolerance"] = dfah12["LCR Tolerance"]
+
+    # Arrange the columns in the specified order
+    ordered_columns = [
+        "PartNumberName", "VenderLotName", "Group", "Priority", "Description",
+        "LCRTYPE", "LCR Type", "LCR Value", "LCR Unit", "LCR Tolerance", "Tolerance",
+        "VENDERLOTPARTNUMBER.Specify other settings_LCR Check",
+        "VENDERLOTPARTNUMBER.Specify other settings_LCR Check Parameter",
+        "VENDERLOTPARTNUMBER.Specify other settings_LCR Check Nominal Value",
+        "VENDERLOTPARTNUMBER.Specify other settings_LCR Check Nominal Value Unit",
+        "VENDERLOTPARTNUMBER.Specify other settings_LCR Check Tolerance"
+    ]
+    dfah12 = dfah12[ordered_columns]
+
+    # Display the head of the resulting DataFrame
+    print(dfah12.head())
+    
+    def convert_unit(value, part_type):
+        if not isinstance(value, str):
+            return value  # Return as is if not a string
+
+        val = value.strip().lower()
+
+        if part_type == "CAPACITOR":
+            if val in ["pf", "p"]:
+                return -12
+            elif val in ["nf", "n"]:
+                return -9
+            elif val in ["uf", "u"]:
+                return -6
+            elif val in ["mf", "m"]:
+                return -3
+            elif val == "f":
+                return 0
+
+        elif part_type == "RESISTOR":
+            if val in ["mo", "m"]:
+                return 6
+            elif val in ["ko", "k"]:
+                return 3
+            elif val == "o":
+                return 0
+            elif val == "m":
+                return -3
+
+        return value  # Return original if no match
+
+    # Apply transformation
+    dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check Nominal Value Unit"] = dfah12.apply(
+        lambda row: convert_unit(
+            row["VENDERLOTPARTNUMBER.Specify other settings_LCR Check Nominal Value Unit"],
+            row["VENDERLOTPARTNUMBER.Specify other settings_LCR Check"]
+        ),
+        axis=1
+    )
+    
+    # Replace values in "VENDERLOTPARTNUMBER.Specify other settings_LCR Check"
+    dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check"] = dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check"].replace({
+        "CAPACITOR": 1,
+        "RESISTOR": 1
+    })
+
+    # Replace values in "VENDERLOTPARTNUMBER.Specify other settings_LCR Check Parameter"
+    dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check Parameter"] = dfah12["VENDERLOTPARTNUMBER.Specify other settings_LCR Check Parameter"].replace({
+        "CAP": 1,
+        "RES": 2
+    })
+
+    import csv
+
+    output_path = "D:/NX_BACKWORK/Feeder Setup_PROCESS/#Output/Verified/LCR-OUTPUT.csv"
+
+    dfah12.to_csv(output_path, index=False, quoting=csv.QUOTE_ALL)
+    
+    # Check if the file exists before renaming
+    src_2 = 'LCR-OUTPUT.csv'
+    if os.path.isfile(src_2):
+        os.rename(src_2, f'{dLbr1}_LCR.csv')
+        print(f"File {src_2} renamed to {dLbr1}_LCR.csv")
+    else:
+        print(f"File {src_2} does not exist.")
+
 
     with pd.ExcelWriter("D:/NX_BACKWORK/Feeder Setup_PROCESS/#Output/Verified/Bom_List-Verified.xlsx", engine='openpyxl') as writer:
         style_df1.to_excel(writer, sheet_name="Bom to XY", index=False)
