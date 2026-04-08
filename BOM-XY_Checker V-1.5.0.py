@@ -97,7 +97,7 @@ if not is_authorized_pc(AUTHORIZED_SIGNATURES):
 print("Authorized system. Program running...")
 
 print('\n')
-print("\033[92;4m*******BOM Manipulation--PY_V-1.5.1 interface_TTK/APR|08|04|2026-89P13*******\033[0m")
+print("\033[92;4m*******BOM Manipulation--PY_V-1.5.0 interface_TTK/AUG|04|08|2025-89P13*******\033[0m")
 print('\n')
 
 # Get the current date and time
@@ -616,24 +616,6 @@ except ValueError:
         dfXYC1 = len(dfXY1['B_Ref_List'])
         print(f'Total count of rows in the "XY_Ref_List" column: {dfXYC1}') # TAKING XY REFERENCE COUNT FROM THE BEIGN
         dfXYC2 = dfXY1['S'].value_counts().reset_index()
-        
-        # Find duplicates based on X and Y
-        duplicates = dfXY1[dfXY1.duplicated(subset=["X", "Y"], keep=False)]
-
-        # Sort them
-        duplicates_sorted = duplicates.sort_values(by=["X", "Y"])
-
-        print(duplicates_sorted)
-        
-        duplicates_sorted["COUNT"] = duplicates_sorted.groupby(["X", "Y"])["R"].transform("count")
-        
-        df_duplicates = duplicates_sorted[duplicates_sorted["COUNT"] > 1]
-        
-        print(df_duplicates)
-        
-        df_duplicates = df_duplicates.sort_values(by=["X", "Y"])
-
-        print(df_duplicates)
 
         dsplcr1['Long Des'] = dsplcr1['Long Des'].str.replace('0201', '')
         dsplcr1['Long Des'] = dsplcr1['Long Des'].str.replace('0402', '')
@@ -665,7 +647,6 @@ except ValueError:
         count_df = pd.DataFrame({'BOM Ref Count': [dsco3]})
         count_df.to_excel(writer, sheet_name="BOM Ref Count", index=TRUE)
         count_df = pd.DataFrame({'XY Ref Count': [dfXYC1]})
-        duplicates_sorted.to_excel(writer, sheet_name="duplicat_XY", index=False)
         count_df.to_excel(writer, sheet_name="XY Ref Count", index=TRUE)
         dfXYC2.to_excel(writer, sheet_name="XY Side Counts", index=True)
         dsplcr1.to_excel(writer, sheet_name="BOM_SL", index=False)
@@ -926,7 +907,6 @@ except ValueError:
     dfah8 = pd.read_excel("BOM_List_OP.xlsx", sheet_name="PART MASTER")
     dfah9 = pd.read_excel("BOM_List_OP.xlsx", sheet_name="BOM_SL")
     dfah10 = pd.read_excel("BOM_List_OP.xlsx", sheet_name="Orginal_BOM_SL")
-    dfah13 = pd.read_excel("BOM_List_OP.xlsx", sheet_name="duplicat_XY")
 
     # Define a function for row styling
     def highlight_row(row):
@@ -1483,7 +1463,6 @@ except ValueError:
     else:
         print(f"File {src_2} does not exist.")
 
-    dfah14 = dfah13['S'].value_counts().reset_index()
 
     with pd.ExcelWriter("D:/NX_BACKWORK/Feeder Setup_PROCESS/#Output/Verified/Bom_List-Verified.xlsx", engine='openpyxl') as writer:
         style_df1.to_excel(writer, sheet_name="Bom to XY", index=False)
@@ -1499,7 +1478,6 @@ except ValueError:
         dfah9.to_excel(writer, sheet_name="BOM_SL", index=False)
         dfah10.to_excel(writer, sheet_name="Orginal_BOM_SL", index=False)
         dfah11.to_excel(writer, sheet_name="Part Master LCR", index=False)
-        dfah13.to_excel(writer, sheet_name="duplicat_XY", index=False)
 
         print('\n')
         print("\033[92;4m*******BOM XY Verification Progress Complete*******\033[0m")
@@ -1524,10 +1502,6 @@ except ValueError:
         print("\n")
         print("``````````````````````````````````````````````")
         print(f'Total count of XY in the "Reference" column: {dfXYC1}')
-        print("``````````````````````````````````````````````")
-        print("\n")
-        print("``````````````````````````````````````````````")
-        print(f'Duplicate count of X&Y in the "Diff-Reference" column: {dfah14}')
         print("``````````````````````````````````````````````")
         print("\n")
         print("``````````````````````````````````````````````")
@@ -1625,10 +1599,6 @@ except ValueError:
             self.print_to_log("``````````````````````````````````````````````")
             self.print_to_log("\n")
             self.print_to_log("``````````````````````````````````````````````")
-            self.print_to_log(f'Duplicate count of X&Y in the "Diff-Reference" column: {dfah14}')
-            self.print_to_log("``````````````````````````````````````````````")
-            self.print_to_log("\n")
-            self.print_to_log("``````````````````````````````````````````````")
             self.print_to_log(f'Total count of XY DATA side in the "S" column: {dfXYC2}')
             self.print_to_log("``````````````````````````````````````````````")
             self.print_to_log("\n")
@@ -1723,4 +1693,4 @@ if __name__ == "__main__":
 
     sys.exit() #BOM Manipulation
     
-    #pyinstaller -F --onefile --console --name BOMXY-CHECKER-v-1.5.1 --icon=comic-bom.ico BOM-XY_Checker.py
+    #pyinstaller -F --onefile --console --name BOMXY-CHECKER --icon=comic-bom.ico BOM-XY_Checker.py
